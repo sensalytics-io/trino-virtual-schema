@@ -1,0 +1,6 @@
+error-tags:
+  VSTR:
+    packages:
+      - com.exasol.adapter.dialects.trino
+      - com.exasol.closeafterall
+    highest-index: 9
