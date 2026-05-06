@@ -41,7 +41,7 @@ class TrinoColumnMetadataReaderTest {
         this.rawProperties = new HashMap<>();
     }
 
-    @ValueSource(ints = {Types.OTHER, Types.ARRAY, Types.JAVA_OBJECT, Types.VARBINARY})
+    @ValueSource(ints = {Types.OTHER, Types.ARRAY, Types.JAVA_OBJECT})
     @ParameterizedTest
     void testMapJdbcTypeFallbackToMaxVarChar(final int type) {
         assertThat(mapJdbcType(type), equalTo(DataType.createMaximumSizeVarChar(DataType.ExaCharset.UTF8)));

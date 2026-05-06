@@ -123,4 +123,26 @@ class TrinoSqlGenerationVisitorTest {
                         + "HAVING 1 < COUNT(\"url\") "
                         + "ORDER BY \"user_id\" LIMIT 10"));
     }
+
+    @CsvSource(delimiter = '|', value = {
+            "array(integer)       | JSON_FORMAT(CAST(\"col\" AS JSON))",
+            "map(varchar,integer) | JSON_FORMAT(CAST(\"col\" AS JSON))",
+            "row(a integer)       | JSON_FORMAT(CAST(\"col\" AS JSON))",
+            "Geometry             | ST_AsText(\"col\")",
+            "SphericalGeography   | ST_AsText(to_geometry(\"col\"))",
+            "json                 | CAST(\"col\" AS VARCHAR)",
+            "uuid                 | CAST(\"col\" AS VARCHAR)",
+            "ipaddress            | CAST(\"col\" AS VARCHAR)",
+            "varchar              | \"col\""
+    })
+    @ParameterizedTest
+    void testColumnProjectionConversion(final String typeName, final String expected) throws AdapterException {
+        final SqlColumn column = new SqlColumn(1, ColumnMetadata.builder()
+                .name("col")
+                .adapterNotes("{\"jdbcDataType\":12, \"typeName\":\"" + typeName.trim() + "\"}")
+                .type(DataType.createMaximumSizeVarChar(DataType.ExaCharset.UTF8))
+                .build());
+        final SqlSelectList selectList = SqlSelectList.createRegularSelectList(List.of(column));
+        assertThat(this.visitor.visit(selectList), equalTo(expected.trim()));
+    }
 }
