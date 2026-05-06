@@ -37,13 +37,14 @@ public class TrinoColumnMetadataReader extends BaseColumnMetadataReader {
     @Override
     public DataType mapJdbcType(final JDBCTypeDescription jdbcTypeDescription) {
         switch (jdbcTypeDescription.getJdbcType()) {
-            case Types.OTHER:     // NUMBER
-            case Types.JAVA_OBJECT: // MAP, ROW, JSON, IPADDRESS, UUID
-            case Types.ARRAY:     // ARRAY
-            case Types.VARBINARY: // VARBINARY
+            case Types.OTHER:               // NUMBER
+            case Types.JAVA_OBJECT:         // MAP, ROW, JSON, JSON2016, IPADDRESS, UUID
+            case Types.ARRAY:               // ARRAY
                 LOGGER.finer(() -> "Mapping Trino datatype \"" + jdbcTypeDescription.getTypeName()
                         + "\" to maximum VARCHAR()");
                 return DataType.createMaximumSizeVarChar(DataType.ExaCharset.UTF8);
+            case Types.TIME_WITH_TIMEZONE:  // TIME WITH TIME ZONE
+                return DataType.createVarChar(100, DataType.ExaCharset.UTF8);
             default:
                 return super.mapJdbcType(jdbcTypeDescription);
         }

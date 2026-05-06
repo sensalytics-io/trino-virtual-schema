@@ -1,5 +1,37 @@
 # Design for the Trino Virtual Schema adapter
 
+## Data Types
+
+Trino types are translated to Exasol types when the virtual schema's column metadata is read. The adapter overrides only a few cases in `TrinoColumnMetadataReader.mapJdbcType`; everything else falls through to `BaseColumnMetadataReader` from `virtual-schema-common-jdbc`.
+
+| Trino type                                                                       | Exasol type            | Notes                                                                             |
+|----------------------------------------------------------------------------------|------------------------|-----------------------------------------------------------------------------------|
+| `BOOLEAN`                                                                        | `BOOLEAN`              |                                                                                   |
+| `TINYINT`, `SMALLINT`, `INTEGER`, `BIGINT`                                       | `DECIMAL(p, 0)`        |                                                                                   |
+| `REAL`, `DOUBLE`                                                                 | `DOUBLE`               | `REAL` widens from 4 to 8 bytes                                                   |
+| `DECIMAL(p, s)`                                                                  | `DECIMAL(p, s)`        | falls back to max `VARCHAR` if `p > 36` (Trino max is 38)                         |
+| `VARCHAR(n)`                                                                     | `VARCHAR(n)`           | unbounded `VARCHAR` becomes max `VARCHAR`                                         |
+| `CHAR(n)`                                                                        | `CHAR(n)`              | larger sizes fall back to `VARCHAR`                                               |
+| `DATE`                                                                           | `DATE`                 |                                                                                   |
+| `TIMESTAMP(p)`                                                                   | `TIMESTAMP(min(p, 9))` | Trino supports up to picoseconds (p ≤ 12); capped to nanoseconds                  |
+| `TIMESTAMP(p) WITH TIME ZONE`                                                    | `VARCHAR(100)`         | literal including the zone; disables timestamp arithmetic and predicate push-down |
+| `TIME(p)`                                                                        | `VARCHAR(100)`         |                                                                                   |
+| `TIME(p) WITH TIME ZONE`                                                         | `VARCHAR(100)`         |                                                                                   |
+| `NUMBER`                                                                         | max `VARCHAR`          | non-standard Trino type                                                           |
+| `JSON`, `JSON2016`, `IPADDRESS`, `UUID`                                          | max `VARCHAR`          |                                                                                   |
+| `ARRAY`, `MAP`, `ROW`                                                            | max `VARCHAR`          | cast to `VARCHAR` at push-down time                                               |
+| `INTERVAL DAY TO SECOND`, `INTERVAL YEAR TO MONTH`                               | max `VARCHAR`          |                                                                                   |
+| `GEOMETRY`, `SPHERICAL_GEOGRAPHY`, `BING_TILE`, `KDB_TREE`                       | max `VARCHAR`          |                                                                                   |
+| `HYPER_LOG_LOG`, `P4_HYPER_LOG_LOG`, `QDIGEST`, `TDIGEST`, `SET_DIGEST`, `COLOR` | max `VARCHAR`          |                                                                                   |
+
+### Unsupported types
+
+| Trino type  | Reason                                                                                                                                                                  |
+|-------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `VARBINARY` | Exasol has no native binary type, and a hex-encoded `VARCHAR` representation cannot round-trip back to bytes. Columns of this type are dropped from the virtual schema. |
+
+---
+
 ## Scalar Functions
 
 ### `SECONDS_BETWEEN`, `MINUTES_BETWEEN`, `HOURS_BETWEEN`, `DAYS_BETWEEN`, `MONTHS_BETWEEN`, `YEARS_BETWEEN`
