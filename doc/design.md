@@ -52,36 +52,6 @@ Exasol's `COLOGNE_PHONETIC` function returns the Kölner Phonetik code of a stri
 
 ---
 
-### `SECOND`
-
-Trino's `EXTRACT(SECOND FROM timestamp)` returns the integer second component (0–59), which matches Exasol's `SECOND` behaviour.
-
-Note: this function is disabled in the PostgreSQL adapter because PostgreSQL's `DATE_PART('SECOND', ...)` can return fractional seconds (e.g. `45.5`). Trino does not have this issue.
-
-**Design**: Supported. Mapped to `CAST(EXTRACT(SECOND FROM x) AS DECIMAL(2,0))`.
-
----
-
-### `HOUR`
-
-Trino's `EXTRACT(HOUR FROM timestamp)` returns the integer hour component (0–23), matching Exasol's `HOUR` behaviour.
-
-Note: this function is not implemented in the PostgreSQL adapter. Trino supports it cleanly.
-
-**Design**: Supported. Mapped to `CAST(EXTRACT(HOUR FROM x) AS DECIMAL(2,0))`.
-
----
-
-### `POSIX_TIME`
-
-Exasol's `POSIX_TIME(timestamp)` returns the number of seconds since the Unix epoch (1970-01-01 00:00:00 UTC). Trino's `TO_UNIXTIME(timestamp)` provides the same result. Both interpret the input as UTC and are not affected by the session timezone.
-
-Note: this function is disabled in the PostgreSQL adapter because `EXTRACT(EPOCH FROM ...)` does not follow the Exasol session timezone. Trino does not share this concern.
-
-**Design**: Supported. Mapped to `TO_UNIXTIME(x)`.
-
----
-
 ### Geospatial functions (`ST_*`)
 
 Trino has native geospatial support via the `io.trino.plugin.geospatial` plugin, but the Exasol virtual schema API's geospatial functions do not map cleanly to Trino's `ST_*` function signatures.
