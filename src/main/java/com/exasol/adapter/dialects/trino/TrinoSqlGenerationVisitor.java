@@ -6,29 +6,20 @@ import com.exasol.adapter.dialects.rewriting.SqlGenerationContext;
 import com.exasol.adapter.dialects.rewriting.SqlGenerationVisitor;
 import com.exasol.adapter.sql.*;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Locale;
-import java.util.Set;
+import java.util.*;
 
 /**
  * This class generates SQL queries for the {@link TrinoSqlDialect}.
  */
 public class TrinoSqlGenerationVisitor extends SqlGenerationVisitor {
-    private static final Set<String> TYPE_NAMES_REQUIRING_CAST = Set.of("array", "map", "row", "json", "uuid",
-            "ipaddress", "geometry", "spherical_geography");
-    private static final Set<String> TYPE_NAMES_NOT_SUPPORTED = Set.of();
+    private static final Set<String> TYPE_NAMES_VARCHAR_CAST = Set.of("json", "uuid", "ipaddress");
+    private static final Set<String> TYPE_NAMES_JSON_FORMATTED = Set.of("array", "map", "row");
+    private static final Set<String> TYPE_NAMES_NOT_SUPPORTED = Collections.emptySet();
+    private static final String TYPE_NAME_GEOMETRY = "geometry";
+    private static final String TYPE_NAME_SPHERICAL_GEOGRAPHY = "sphericalgeography";
 
     public TrinoSqlGenerationVisitor(final SqlDialect dialect, final SqlGenerationContext context) {
         super(dialect, context);
-    }
-
-    protected Set<String> getListOfTypeNamesRequiringCast() {
-        return TYPE_NAMES_REQUIRING_CAST;
-    }
-
-    protected Set<String> getListOfTypeNamesNotSupported() {
-        return TYPE_NAMES_NOT_SUPPORTED;
     }
 
     @Override
@@ -104,17 +95,32 @@ public class TrinoSqlGenerationVisitor extends SqlGenerationVisitor {
 
     private String buildColumnProjectionString(final String typeName, final String projectionString) {
         final String normalizedTypeName = typeName.toLowerCase(Locale.ENGLISH);
+
         if (TYPE_NAMES_NOT_SUPPORTED.contains(normalizedTypeName)) {
             return "CAST('" + normalizedTypeName + " NOT SUPPORTED' AS VARCHAR) AS NOT_SUPPORTED";
         }
-        if (requiresVarcharCast(normalizedTypeName)) {
+
+        if (startsWithAny(normalizedTypeName, TYPE_NAMES_JSON_FORMATTED)) {
+            return "JSON_FORMAT(CAST(" + projectionString + " AS JSON))";
+        }
+
+        if (normalizedTypeName.startsWith(TYPE_NAME_GEOMETRY)) {
+            return "ST_AsText(" + projectionString + ")";
+        }
+
+        if (normalizedTypeName.startsWith(TYPE_NAME_SPHERICAL_GEOGRAPHY)) {
+            return "ST_AsText(to_geometry(" + projectionString + "))";
+        }
+
+        if (startsWithAny(normalizedTypeName, TYPE_NAMES_VARCHAR_CAST)) {
             return "CAST(" + projectionString + " AS VARCHAR)";
         }
+
         return projectionString;
     }
 
-    private boolean requiresVarcharCast(final String typeName) {
-        return TYPE_NAMES_REQUIRING_CAST.stream().anyMatch(typeName::startsWith);
+    private static boolean startsWithAny(final String typeName, final Set<String> prefixes) {
+        return prefixes.stream().anyMatch(typeName::startsWith);
     }
 
     @Override
