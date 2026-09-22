@@ -2,7 +2,7 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <artifactId>trino-virtual-schema</artifactId>
-    <version>0.1.0</version>
+    <version>0.2.0</version>
     <name>Virtual Schema for Trino</name>
     <description>Virtual Schema for connecting Trino as data source to Exasol</description>
     <url>https://github.com/sensalytics-io/trino-virtual-schema/</url>
@@ -173,7 +173,7 @@
     <parent>
         <artifactId>trino-virtual-schema-generated-parent</artifactId>
         <groupId>com.exasol</groupId>
-        <version>0.1.0</version>
+        <version>0.2.0</version>
         <relativePath>pk_generated_parent.pom</relativePath>
     </parent>
 </project>

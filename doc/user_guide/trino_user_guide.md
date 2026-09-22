@@ -58,7 +58,7 @@ framework where to find the libraries (JAR files) for Virtual Schema and databas
 CREATE
 OR REPLACE JAVA ADAPTER SCRIPT ADAPTER.JDBC_ADAPTER AS
   %scriptclass com.exasol.adapter.RequestDispatcher;
-%jar /buckets/<BFS service>/<bucket>/virtual-schema-dist-13.0.0-trino-0.1.0.jar;
+%jar /buckets/<BFS service>/<bucket>/virtual-schema-dist-13.0.0-trino-0.2.0.jar;
 %jar /buckets/<BFS service>/<bucket>/trino-jdbc-<trino-driver-version>.jar;
 /
 ```

@@ -1,12 +1,14 @@
-# Virtual Schema for Trino 0.1.0, released 2026-??-??
+# Virtual Schema for Trino 0.2.0, released 2026-??-??
 
-Code name:
+Code name: `TO_DATE` and `TO_TIMESTAMP` push-down
 
 ## Summary
 
+Predicates wrapping a column in `TO_DATE(...)` or `TO_TIMESTAMP(...)` are now pushed down to Trino instead of importing the full virtual table and filtering on the Exasol side.
+
 ## Features
 
-* Initial implementation of the Trino Virtual Schema, ported from the PostgreSQL Virtual Schema
+* #1: Added push-down for `TO_DATE` and `TO_TIMESTAMP`
 
 ## Dependency Updates
 
