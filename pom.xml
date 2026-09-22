@@ -5,7 +5,7 @@
     <version>0.1.0</version>
     <name>Virtual Schema for Trino</name>
     <description>Virtual Schema for connecting Trino as data source to Exasol</description>
-    <url>https://github.com/exasol/trino-virtual-schema/</url>
+    <url>https://github.com/sensalytics-io/trino-virtual-schema/</url>
     <properties>
         <vscjdbc.version>13.0.0</vscjdbc.version>
         <trino.jdbc.version>480</trino.jdbc.version>
