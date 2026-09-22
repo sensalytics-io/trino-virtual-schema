@@ -266,11 +266,11 @@ Capabilities tell the Exasol which SQL features / keywords a Virtual Schema adap
 | IS_YMINTERVAL       |           |
 | IS_TIMESTAMP        |           |
 | TO_CHAR             |           |
-| TO_DATE             |           |
+| TO_DATE             |     ✓     |
 | TO_DSINTERVAL       |           |
 | TO_YMINTERVAL       |           |
 | TO_NUMBER           |           |
-| TO_TIMESTAMP        |           |
+| TO_TIMESTAMP        |     ✓     |
 | BIT_AND             |           |
 | BIT_CHECK           |           |
 | BIT_LROTATE         |           |

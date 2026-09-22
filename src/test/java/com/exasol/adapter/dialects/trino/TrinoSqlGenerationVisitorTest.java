@@ -24,7 +24,9 @@ import java.util.List;
 import static com.exasol.adapter.dialects.VisitorAssertions.assertSqlNodeConvertedToOne;
 import static com.exasol.adapter.sql.ScalarFunction.POSIX_TIME;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 @ExtendWith(MockitoExtension.class)
 class TrinoSqlGenerationVisitorTest {
@@ -144,5 +146,65 @@ class TrinoSqlGenerationVisitorTest {
                 .build());
         final SqlSelectList selectList = SqlSelectList.createRegularSelectList(List.of(column));
         assertThat(this.visitor.visit(selectList), equalTo(expected.trim()));
+    }
+
+    @Test
+    void testVisitSqlFunctionScalarToDate() throws AdapterException {
+        final SqlFunctionScalar function = new SqlFunctionScalar(ScalarFunction.TO_DATE,
+                List.of(createColumn("timestamp(3)")));
+        assertThat(this.visitor.visit(function), equalTo("CAST(\"test_column\" AS DATE)"));
+    }
+
+    @Test
+    void testVisitSqlFunctionScalarToDateOnTimeZoneColumn() throws AdapterException {
+        // Zone-carrying columns take the same path: Trino casts them using the value's own time zone.
+        final SqlFunctionScalar function = new SqlFunctionScalar(ScalarFunction.TO_DATE,
+                List.of(createColumn("timestamp(3) with time zone")));
+        assertThat(this.visitor.visit(function), equalTo("CAST(\"test_column\" AS DATE)"));
+    }
+
+    @Test
+    void testVisitSqlFunctionScalarToTimestamp() throws AdapterException {
+        final SqlFunctionScalar function = new SqlFunctionScalar(ScalarFunction.TO_TIMESTAMP,
+                List.of(createColumn("timestamp(6)")));
+        assertThat(this.visitor.visit(function), equalTo("CAST(\"test_column\" AS TIMESTAMP(9))"));
+    }
+
+    @Test
+    void testVisitSqlFunctionScalarToDateWithFormat() throws AdapterException {
+        final SqlFunctionScalar function = new SqlFunctionScalar(ScalarFunction.TO_DATE,
+                List.of(new SqlLiteralString("01.05.2023"), new SqlLiteralString("DD.MM.YYYY")));
+        assertThat(this.visitor.visit(function),
+                equalTo("CAST(DATE_PARSE('01.05.2023', '%d.%m.%Y') AS DATE)"));
+    }
+
+    @Test
+    void testVisitSqlFunctionScalarToTimestampWithFormat() throws AdapterException {
+        final SqlFunctionScalar function = new SqlFunctionScalar(ScalarFunction.TO_TIMESTAMP,
+                List.of(new SqlLiteralString("2023-05-01 14:30:00"), new SqlLiteralString("YYYY-MM-DD HH24:MI:SS")));
+        assertThat(this.visitor.visit(function),
+                equalTo("CAST(DATE_PARSE('2023-05-01 14:30:00', '%Y-%m-%d %H:%i:%s') AS TIMESTAMP(9))"));
+    }
+
+    @Test
+    void testVisitSqlFunctionScalarToDateWithNonLiteralFormat() {
+        final SqlFunctionScalar function = new SqlFunctionScalar(ScalarFunction.TO_DATE,
+                List.of(createColumn("varchar"), createColumn("varchar")));
+        final AdapterException exception = assertThrows(AdapterException.class, () -> this.visitor.visit(function));
+        assertThat(exception.getMessage(), containsString("E-VSTR-8"));
+    }
+
+    @Test
+    void testVisitSqlFunctionScalarToDateWithUnsupportedFormat() {
+        final SqlFunctionScalar function = new SqlFunctionScalar(ScalarFunction.TO_DATE,
+                List.of(new SqlLiteralString("2023-Q1"), new SqlLiteralString("YYYY-Q")));
+        final AdapterException exception = assertThrows(AdapterException.class, () -> this.visitor.visit(function));
+        assertThat(exception.getMessage(), containsString("E-VSTR-7"));
+    }
+
+    private SqlColumn createColumn(final String typeName) {
+        return new SqlColumn(1, ColumnMetadata.builder().name("test_column")
+                .adapterNotes("{\"jdbcDataType\":93, \"typeName\":\"" + typeName + "\"}")
+                .type(DataType.createChar(20, DataType.ExaCharset.UTF8)).build());
     }
 }
