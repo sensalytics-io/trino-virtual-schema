@@ -5,6 +5,7 @@ import com.exasol.adapter.dialects.SqlDialect;
 import com.exasol.adapter.dialects.rewriting.SqlGenerationContext;
 import com.exasol.adapter.dialects.rewriting.SqlGenerationVisitor;
 import com.exasol.adapter.sql.*;
+import com.exasol.errorreporting.ExaError;
 
 import java.util.*;
 
@@ -70,9 +71,43 @@ public class TrinoSqlGenerationVisitor extends SqlGenerationVisitor {
                 return "TO_UNIXTIME(" + argumentsSql.get(0) + ")";
             case FLOAT_DIV:
                 return "(CAST(" + argumentsSql.get(0) + " AS DOUBLE) / CAST(" + argumentsSql.get(1) + " AS DOUBLE))";
+            case TO_DATE:
+                return "CAST(" + getConvertedDateTime(function, argumentsSql) + " AS DATE)";
+            case TO_TIMESTAMP:
+                return "CAST(" + getConvertedDateTime(function, argumentsSql) + " AS TIMESTAMP(9))";
             default:
                 return super.visit(function);
         }
+    }
+
+    /**
+     * Render the value an Exasol conversion function operates on, as a Trino expression of the corresponding date or
+     * timestamp type.
+     * <p>
+     * Trino casts zone-carrying timestamps using the value's own time zone, independent of the session time zone, so
+     * the plain cast is correct for every argument type. See the {@code TO_DATE}, {@code TO_TIMESTAMP} section in
+     * {@code doc/design.md} for the remaining semantic differences to Exasol's local evaluation.
+     *
+     * @param function     conversion function to render the argument of
+     * @param argumentsSql arguments of the function, already rendered as Trino SQL
+     * @return Trino expression that Exasol's conversion semantics can be applied to
+     */
+    private String getConvertedDateTime(final SqlFunctionScalar function, final List<String> argumentsSql)
+            throws AdapterException {
+        if (argumentsSql.size() < 2) {
+            return argumentsSql.get(0);
+        }
+        return "DATE_PARSE(" + argumentsSql.get(0) + ", " + getDateFormatLiteral(function) + ")";
+    }
+
+    private String getDateFormatLiteral(final SqlFunctionScalar function) throws AdapterException {
+        final SqlNode format = function.getArguments().get(1);
+        if (!(format instanceof SqlLiteralString)) {
+            throw new AdapterException(ExaError.messageBuilder("E-VSTR-8")
+                    .message("Unable to push down {{function|uq}} because its format model is not a string literal.", function.getFunctionName())
+                    .mitigation("Use a literal format model or remove the second argument.").toString());
+        }
+        return getDialect().getStringLiteral(TrinoDateFormat.toTrinoFormat(((SqlLiteralString) format).getValue()));
     }
 
     private String getAddDateTime(final List<String> argumentsSql, final String unit) {
@@ -146,10 +181,9 @@ public class TrinoSqlGenerationVisitor extends SqlGenerationVisitor {
 
         for (int index = 0; index < expressions.size(); index++) {
             final String expression = expressions.get(index).accept(this);
-            final boolean isAscending = index < ascending.size() ? ascending.get(index) : true;
-            final boolean useNullsLast = index < nullsLast.size() ? nullsLast.get(index) : true;
-            parts.add(expression + (isAscending ? " ASC" : " DESC")
-                    + (useNullsLast ? " NULLS LAST" : " NULLS FIRST"));
+            final boolean isAscending = index >= ascending.size() || ascending.get(index);
+            final boolean useNullsLast = index >= nullsLast.size() || nullsLast.get(index);
+            parts.add(expression + (isAscending ? " ASC" : " DESC") + (useNullsLast ? " NULLS LAST" : " NULLS FIRST"));
         }
 
         return String.join(", ", parts);

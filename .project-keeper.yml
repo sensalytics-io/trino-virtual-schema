@@ -7,6 +7,12 @@ sources:
       - jar_artifact
 version:
   fromSource: pom.xml
+excludes:
+  # The README intentionally carries no SonarCloud badges: the badge block project-keeper expects points at the
+  # Exasol-org SonarCloud project, which does not exist for this fork.
+  - regex: "E-PK-CORE-62: .*"
+  # Project-keeper derives the expected pom URL from the Exasol GitHub org; this fork lives under sensalytics-io.
+  - regex: "E-PK-CORE-122: .*"
 build:
   runnerOs: ubuntu-24.04
   freeDiskSpace: false
